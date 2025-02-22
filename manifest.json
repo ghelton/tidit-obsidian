@@ -1,8 +1,8 @@
 {
-	"id": "tidit-obsidian",
-	"name": "Tidit Obsidian Plugin",
+	"id": "tidit",
+	"name": "Tidit",
 	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
+	"minAppVersion": "1.7.0",
 	"description": "tidit adds timestamps to your document as you type — when you want it, how you want it, where you want it.",
 	"author": "codingthings.com",
 	"authorUrl": "https://www.codingthings.com",
