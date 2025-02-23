@@ -86,7 +86,7 @@ export default class TiditPlugin extends Plugin {
 		this.statusBarItemEl = this.addStatusBarItem();
 
 		this.addCommand({
-			id: "tidit-on-off-command",
+			id: "tidit-on-off",
 			name: "Turn tidit on/off",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.settings.tiditOn = !this.settings.tiditOn;
@@ -102,7 +102,7 @@ export default class TiditPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "tidit-editor-command",
+			id: "tidit-insert-timstamp",
 			name: "Insert Timestamp",
 			editorCallback: (editor: Editor) => {
 				const cursor = editor.getCursor();
