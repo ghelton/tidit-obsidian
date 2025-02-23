@@ -87,7 +87,7 @@ export default class TiditPlugin extends Plugin {
 
 		this.addCommand({
 			id: "tidit-on-off",
-			name: "Turn tidit on/off",
+			name: "Turn auto-timestamp on/off",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.settings.tiditOn = !this.settings.tiditOn;
 
@@ -103,7 +103,7 @@ export default class TiditPlugin extends Plugin {
 
 		this.addCommand({
 			id: "tidit-insert-timstamp",
-			name: "Insert Timestamp",
+			name: "Insert timestamp at position",
 			editorCallback: (editor: Editor) => {
 				const cursor = editor.getCursor();
 				const ts = this.getFormattedTimestamp();
