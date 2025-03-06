@@ -1,14 +1,14 @@
-import dayjs from "dayjs";
 import {
 	App,
 	Editor,
 	MarkdownView,
+	MomentFormatComponent,
 	Notice,
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	moment,
 } from "obsidian";
-
 
 interface TiditPluginSettings {
 	tiditOn: boolean;
@@ -27,7 +27,7 @@ const DEFAULT_SETTINGS: TiditPluginSettings = {
 export default class TiditPlugin extends Plugin {
 	settings: TiditPluginSettings;
 	statusBarItemEl: HTMLElement;
-	lastTimeStampInsertTimestamp: dayjs.Dayjs;
+	lastTimeStampInsertTimestamp: moment.Moment;
 	currFileName: string;
 
 	insertTextAtLine(editor: Editor, line: number, pos: number, ts: string) {
@@ -36,14 +36,14 @@ export default class TiditPlugin extends Plugin {
 	}
 
 	getFormattedTimestamp() {
-		const timestamp = dayjs().format(this.settings.timestampFormat);
+		const timestamp = moment().format(this.settings.timestampFormat);
 		return this.settings.insertNewLineAfterTimestamp
 			? `${timestamp}\n`
 			: `${timestamp} `;
 	}
 
 	resetTimeStampInsertTimestamp() {
-		this.lastTimeStampInsertTimestamp = dayjs(0);
+		this.lastTimeStampInsertTimestamp = moment(0);
 	}
 
 	isCursorInListLine(line: string): boolean {
@@ -86,7 +86,7 @@ export default class TiditPlugin extends Plugin {
 		this.statusBarItemEl = this.addStatusBarItem();
 
 		this.addCommand({
-			id: "tidit-on-off",
+			id: "on-off",
 			name: "Turn auto-timestamp on/off",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.settings.tiditOn = !this.settings.tiditOn;
@@ -102,7 +102,7 @@ export default class TiditPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "tidit-insert-timstamp",
+			id: "insert-timestamp",
 			name: "Insert timestamp at position",
 			editorCallback: (editor: Editor) => {
 				const cursor = editor.getCursor();
@@ -136,7 +136,7 @@ export default class TiditPlugin extends Plugin {
 
 			const cursor = editor.getCursor();
 
-			const now = dayjs();
+			const now = moment();
 			if (
 				now.diff(this.lastTimeStampInsertTimestamp, "seconds") <
 				this.settings.addAfterDelay
@@ -158,7 +158,7 @@ export default class TiditPlugin extends Plugin {
 				pos,
 				timestamp
 			);
-			this.lastTimeStampInsertTimestamp = dayjs();
+			this.lastTimeStampInsertTimestamp = moment();
 		});
 	}
 
@@ -198,8 +198,6 @@ class TiditSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		new Setting(containerEl).setName("Tidit Settings");
-
 		new Setting(containerEl)
 			.setName("Tidit on/off")
 			.setDesc(
@@ -214,20 +212,44 @@ class TiditSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Timestamp Format")
-			.setDesc(
-				"Must be a valid format. See https://day.js.org/docs/en/display/format"
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder("YYYY-MM-DD HH:mm:ss")
+		const dateFormatSetting = new Setting(containerEl)
+			.setName("Use timestamp Format")
+			.addMomentFormat((format: MomentFormatComponent) => {
+				format
+					.setDefaultFormat(DEFAULT_SETTINGS.timestampFormat)
+					.setPlaceholder(`e.g. ${DEFAULT_SETTINGS.timestampFormat}`)
 					.setValue(this.plugin.settings.timestampFormat)
-					.onChange(async (value) => {
+					.onChange(async (value: string) => {
+						if (value.trim().length === 0) {
+							value = DEFAULT_SETTINGS.timestampFormat;
+						}
 						this.plugin.settings.timestampFormat = value;
 						await this.plugin.saveSettings();
-					})
-			);
+						// Update the sample element manually when the format changes
+						if (sampleEl) {
+							sampleEl.textContent = `Example: ${moment().format(
+								value
+							)}`;
+						}
+					});
+			});
+		const sampleContainer = dateFormatSetting.descEl.createDiv();
+		const sampleEl: HTMLElement = sampleContainer.createSpan();
+		sampleContainer.createEl("div");
+		sampleEl.textContent = `Example: ${moment().format(
+			this.plugin.settings.timestampFormat
+		)}`;
+
+		const refLink = dateFormatSetting.descEl.createEl("a", {
+			href: "https://momentjs.com/docs/#/displaying/format/",
+		});
+		refLink.setText("See datetime format reference");
+		const defaultEl = dateFormatSetting.descEl.createEl("span", {
+			attr: { style: "display: block" },
+		});
+		defaultEl.setText(
+			`Empty value will default to ${DEFAULT_SETTINGS.timestampFormat}`
+		);
 
 		new Setting(containerEl)
 			.setName("Add timestamp after delay")
