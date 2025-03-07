@@ -213,7 +213,7 @@ class TiditSettingTab extends PluginSettingTab {
 			);
 
 		const dateFormatSetting = new Setting(containerEl)
-			.setName("Use timestamp Format")
+			.setName("Use timestamp format")
 			.addMomentFormat((format: MomentFormatComponent) => {
 				format
 					.setDefaultFormat(DEFAULT_SETTINGS.timestampFormat)
