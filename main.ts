@@ -9,19 +9,26 @@ import {
 	Setting,
 	moment,
 } from "obsidian";
+import * as momentTimezone from "moment-timezone";
 
 interface TiditPluginSettings {
 	tiditOn: boolean;
 	timestampFormat: string;
 	addAfterDelay: number;
 	insertNewLineAfterTimestamp: boolean;
+	timezone: string;
+	useManualTimezoneOffset: boolean;
+	timezoneOffset: number;
 }
 
 const DEFAULT_SETTINGS: TiditPluginSettings = {
 	tiditOn: true,
-	timestampFormat: "YYYY-MM-DD HH:mm:ss",
+	timestampFormat: "YYYY-MM-DD HH:mm:ssZ",
 	addAfterDelay: 60,
 	insertNewLineAfterTimestamp: false,
+	timezone: "local",
+	useManualTimezoneOffset: false,
+	timezoneOffset: 0,
 };
 
 export default class TiditPlugin extends Plugin {
@@ -36,7 +43,22 @@ export default class TiditPlugin extends Plugin {
 	}
 
 	getFormattedTimestamp(): string {
-		const timestamp = moment().format(this.settings.timestampFormat);
+		let timestampMoment = moment();
+		
+		if (this.settings.timezone !== "local" && this.settings.timezone !== "UTC") {
+			// Use moment-timezone for non-local/UTC timezones
+			timestampMoment = momentTimezone.tz(moment(), this.settings.timezone);
+		} else if (this.settings.timezone === "UTC") {
+			// For UTC, use moment().utc()
+			timestampMoment = moment().utc();
+		}
+		
+		// Apply manual offset if enabled and specified
+		if (this.settings.useManualTimezoneOffset && this.settings.timezoneOffset !== 0) {
+			timestampMoment = timestampMoment.utcOffset(this.settings.timezoneOffset);
+		}
+		
+		const timestamp = timestampMoment.format(this.settings.timestampFormat);
 		return this.settings.insertNewLineAfterTimestamp
 			? `${timestamp}\n`
 			: `${timestamp} `;
@@ -297,6 +319,65 @@ class TiditSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.insertNewLineAfterTimestamp =
 							value;
+					})
+			);
+
+		// Timezone setting - will use local time for now
+		new Setting(containerEl)
+			.setName("Timezone")
+			.setDesc("Select timezone for timestamps")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("local", "Local Time")
+					.addOption("UTC", "UTC")
+					// Add common timezones
+					.addOption("America/New_York", "America/New_York")
+					.addOption("America/Los_Angeles", "America/Los_Angeles")
+					.addOption("America/Chicago", "America/Chicago")
+					.addOption("America/Denver", "America/Denver")
+					.addOption("Europe/London", "Europe/London")
+					.addOption("Europe/Paris", "Europe/Paris")
+					.addOption("Europe/Berlin", "Europe/Berlin")
+					.addOption("Europe/Rome", "Europe/Rome")
+					.addOption("Asia/Tokyo", "Asia/Tokyo")
+					.addOption("Asia/Shanghai", "Asia/Shanghai")
+					.addOption("Asia/Hong_Kong", "Asia/Hong_Kong")
+					.addOption("Australia/Sydney", "Australia/Sydney")
+					.addOption("Australia/Melbourne", "Australia/Melbourne")
+					.addOption("Pacific/Auckland", "Pacific/Auckland")
+					.setValue(this.plugin.settings.timezone)
+					.onChange(async (value: string) => {
+						this.plugin.settings.timezone = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// Manual timezone offset setting
+		new Setting(containerEl)
+			.setName("Use Manual Timezone Offset")
+			.setDesc("Enable to use manual timezone offset")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.useManualTimezoneOffset)
+					.onChange(async (value) => {
+						this.plugin.settings.useManualTimezoneOffset = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Manual Timezone Offset")
+			.setDesc("Set manual offset in minutes (e.g., -300 for UTC-5, 60 for UTC+1).")
+			.addText((text) =>
+				text
+					.setPlaceholder("Enter offset in minutes")
+					.setValue(this.plugin.settings.timezoneOffset.toString())
+					.onChange(async (value) => {
+						const offset = parseInt(value);
+						if (!isNaN(offset)) {
+							this.plugin.settings.timezoneOffset = offset;
+							await this.plugin.saveSettings();
+						}
 					})
 			);
 	}
