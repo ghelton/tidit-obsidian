@@ -69,6 +69,26 @@ export default class TiditPlugin extends Plugin {
 		if (this.isCodeBlockStartEnd(lineText)) {
 			return -1;
 		}
+
+		// Check if the beginning of the line matches a datetime string with the format
+		const timestampFormat = this.settings.timestampFormat;
+		const formattedTimestampLength = moment().format(timestampFormat).length;
+
+		try {
+			// strict mode to ensure exact match
+			const matchTimeStamp = moment(
+				lineText.trim().substring(0, formattedTimestampLength),
+				timestampFormat,
+				true
+			);
+			if (matchTimeStamp.isValid()) {
+				return -1; 	// Don't insert if it matches the timestamp format
+			}
+		} catch {
+			// If parsing fails, it's not a matching timestamp format
+			return -1;
+		}
+
 		return 0;
 	}
 
