@@ -30,12 +30,12 @@ export default class TiditPlugin extends Plugin {
 	lastTimeStampInsertTimestamp: moment.Moment;
 	currFileName: string;
 
-	insertTextAtLine(editor: Editor, line: number, pos: number, ts: string) {
-		const t = this.settings.insertNewLineAfterTimestamp ? ts : `${ts}`;
-		editor.replaceRange(t, { line: line, ch: pos });
+	insertTextAtLine(editor: Editor, line: number, pos: number, timestamp: string) {
+		const formattedTimestamp = this.settings.insertNewLineAfterTimestamp ? timestamp : `${timestamp}`;
+		editor.replaceRange(formattedTimestamp, { line: line, ch: pos });
 	}
 
-	getFormattedTimestamp() {
+	getFormattedTimestamp(): string {
 		const timestamp = moment().format(this.settings.timestampFormat);
 		return this.settings.insertNewLineAfterTimestamp
 			? `${timestamp}\n`
@@ -48,10 +48,7 @@ export default class TiditPlugin extends Plugin {
 
 	isCursorInListLine(line: string): boolean {
 		// Check if the current line is a list item (starts with '-', '*', or a number)
-		if (/^\s*[-*+]\s/.test(line) || /^\s*\d+\.\s/.test(line)) {
-			return true;
-		}
-		return false;
+		return /^\s*[-*+]\s/.test(line) || /^\s*\d+\.\s/.test(line);
 	}
 
 	isCodeBlockStartEnd(line: string): boolean {
@@ -62,6 +59,7 @@ export default class TiditPlugin extends Plugin {
 		const cursor = editor.getCursor();
 		// line already moved with the ENTER key. look back one line
 		const lineText = editor.getLine(cursor.line - 1);
+		
 		if (this.isCursorInListLine(lineText)) {
 			return -1;
 		}
@@ -94,9 +92,10 @@ export default class TiditPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		const file = this.app.workspace.activeEditor?.file;
-		if (file) {
-			this.currFileName = file.name;
+		
+		const activeEditor = this.app.workspace.activeEditor;
+		if (activeEditor?.file) {
+			this.currFileName = activeEditor.file.name;
 		} else {
 			this.currFileName = "";
 		}
@@ -126,9 +125,9 @@ export default class TiditPlugin extends Plugin {
 			name: "Insert timestamp at position",
 			editorCallback: (editor: Editor) => {
 				const cursor = editor.getCursor();
-				const ts = this.getFormattedTimestamp();
-				this.insertTextAtLine(editor, cursor.line, cursor.ch, ts);
-				editor.setCursor(cursor.line, ts.length + cursor.ch);
+				const timestamp = this.getFormattedTimestamp();
+				this.insertTextAtLine(editor, cursor.line, cursor.ch, timestamp);
+				editor.setCursor(cursor.line, timestamp.length + cursor.ch);
 			},
 		});
 
@@ -139,11 +138,12 @@ export default class TiditPlugin extends Plugin {
 
 			if (e.key !== "Enter") return;
 
-			const editor = this.app.workspace.activeEditor?.editor;
-
+			const activeEditor = this.app.workspace.activeEditor;
+			const editor = activeEditor?.editor;
+			
 			if (!editor) return;
 
-			const file = this.app.workspace.activeEditor?.file;
+			const file = activeEditor?.file;
 			if (file) {
 				// reset timestamp upon file / tab change
 				if (this.currFileName !== file.name) {
