@@ -19,6 +19,7 @@ interface TiditPluginSettings {
 	timezone: string;
 	useManualTimezoneOffset: boolean;
 	timezoneOffset: number;
+	addTimestampToListLines: boolean;
 }
 
 const DEFAULT_SETTINGS: TiditPluginSettings = {
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS: TiditPluginSettings = {
 	timezone: "local",
 	useManualTimezoneOffset: false,
 	timezoneOffset: 0,
+	addTimestampToListLines: false,
 };
 
 export default class TiditPlugin extends Plugin {
@@ -73,17 +75,39 @@ export default class TiditPlugin extends Plugin {
 		return /^\s*[-*+]\s/.test(line) || /^\s*\d+\.\s/.test(line);
 	}
 
+	isListLineTask(line: string): boolean {
+		// Match lines like '- [ ]', '* [x]', '+ [anything]', etc. Ignore contents inside brackets.
+		return /^\s*[-*+]\s+\[[^\]]*\]\s/.test(line);
+	}
+
 	isCodeBlockStartEnd(line: string): boolean {
 		return line.startsWith("`") || line.endsWith("```");
+	}
+
+	getInsertPositionAfterBullet(line: string): number {
+		const bulletMatch = line.match(/^\s*([-*+])\s+/);
+		if (bulletMatch) {
+			return bulletMatch.index! + bulletMatch[0].length;
+		}
+		return -1;
 	}
 
 	getInsertPositionInLine(editor: Editor): number {
 		const cursor = editor.getCursor();
 		// line already moved with the ENTER key. look back one line
 		const lineText = editor.getLine(cursor.line - 1);
-		
-		if (this.isCursorInListLine(lineText)) {
+		let insertPosition = 0;
+
+		if(this.isListLineTask(lineText)) {
 			return -1;
+		}
+
+		if (this.isCursorInListLine(lineText)) {
+			if(this.settings.addTimestampToListLines) {
+				insertPosition = this.getInsertPositionAfterBullet(lineText);
+			} else {
+				return -1;
+			}
 		}
 
 		if (this.isCodeBlockStartEnd(lineText)) {
@@ -97,7 +121,7 @@ export default class TiditPlugin extends Plugin {
 		try {
 			// strict mode to ensure exact match
 			const matchTimeStamp = moment(
-				lineText.trim().substring(0, formattedTimestampLength),
+				lineText.trim().substring(insertPosition, formattedTimestampLength),
 				timestampFormat,
 				true
 			);
@@ -109,7 +133,7 @@ export default class TiditPlugin extends Plugin {
 			return -1;
 		}
 
-		return 0;
+		return insertPosition;
 	}
 
 	async onload() {
@@ -380,5 +404,17 @@ class TiditSettingTab extends PluginSettingTab {
 						}
 					})
 			);
+
+			new Setting(containerEl)
+				.setName("Add Timestamp to List Lines")
+				.setDesc("Enable to add timestamp to each line in the list")
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.addTimestampToListLines)
+						.onChange(async (value) => {
+							this.plugin.settings.addTimestampToListLines = value;
+							await this.plugin.saveSettings();
+						})
+				);
 	}
 }
