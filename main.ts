@@ -1,5 +1,3 @@
-// Combined regex for Markdown list bullets (unordered and ordered)
-const LIST_BULLET_REGEX = /^\s*([-*+]|\d+[\.\)])\s+/;
 import {
 	App,
 	Editor,
@@ -34,6 +32,10 @@ const DEFAULT_SETTINGS: TiditPluginSettings = {
 	timezoneOffset: 0,
 	addTimestampToListLines: false,
 };
+// Combined regex for Markdown list bullets (unordered and ordered)
+const LIST_BULLET_REGEX = /^\s*([-*+]|\d+[\.\)])\s+/;
+// Combined regex for Markdown task list items (unordered and ordered)
+const LIST_TASK_REGEX = /^\s*([-*+]|\d+[\.\)])\s+\[[^\]]*\]\s/;
 
 export default class TiditPlugin extends Plugin {
 	settings: TiditPluginSettings;
@@ -73,13 +75,12 @@ export default class TiditPlugin extends Plugin {
 	}
 
 	isCursorInListLine(line: string): boolean {
-		// Check if the current line is a list item (unordered or ordered)
 		return LIST_BULLET_REGEX.test(line);
 	}
 
-	isListLineTask(line: string): boolean {
-		// Match lines like '- [ ]', '* [x]', '+ [anything]', '1. [ ]', '2) [x]', etc. Ignore contents inside brackets.
-		return /^\s*([-*+]|\d+[\.|\)])\s+\[[^\]]*\]\s/.test(line);
+		isListLineTask(line: string): boolean {
+			// Match lines like '- [ ]', '* [x]', '+ [anything]', '1. [ ]', '2) [x]', etc. Ignore contents inside brackets.
+			return LIST_TASK_REGEX.test(line);
 	}
 
 	isCodeBlockStartEnd(line: string): boolean {
@@ -87,7 +88,6 @@ export default class TiditPlugin extends Plugin {
 	}
 
 	getInsertPositionAfterBullet(line: string): number {
-		// Match unordered or ordered list bullets using shared regex
 		const bulletMatch = line.match(LIST_BULLET_REGEX);
 		if (bulletMatch) {
 			return bulletMatch.index! + bulletMatch[0].length;
