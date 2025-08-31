@@ -10,6 +10,7 @@ import {
 	moment,
 } from "obsidian";
 import * as momentTimezone from "moment-timezone";
+import { LIST_BULLET_REGEX, LIST_TASK_REGEX, isCursorInListLine, isListLineTask, getInsertPositionAfterBullet } from "./utils";
 
 interface TiditPluginSettings {
 	tiditOn: boolean;
@@ -32,10 +33,6 @@ const DEFAULT_SETTINGS: TiditPluginSettings = {
 	timezoneOffset: 0,
 	addTimestampToListLines: false,
 };
-// Combined regex for Markdown list bullets (unordered and ordered)
-const LIST_BULLET_REGEX = /^\s*([-*+]|\d+[\.\)])\s+/;
-// Combined regex for Markdown task list items (unordered and ordered)
-const LIST_TASK_REGEX = /^\s*([-*+]|\d+[\.\)])\s+\[[^\]]*\]\s/;
 
 export default class TiditPlugin extends Plugin {
 	settings: TiditPluginSettings;
@@ -74,25 +71,8 @@ export default class TiditPlugin extends Plugin {
 		this.lastTimeStampInsertTimestamp = moment(0);
 	}
 
-	isCursorInListLine(line: string): boolean {
-		return LIST_BULLET_REGEX.test(line);
-	}
-
-		isListLineTask(line: string): boolean {
-			// Match lines like '- [ ]', '* [x]', '+ [anything]', '1. [ ]', '2) [x]', etc. Ignore contents inside brackets.
-			return LIST_TASK_REGEX.test(line);
-	}
-
 	isCodeBlockStartEnd(line: string): boolean {
 		return line.startsWith("`") || line.endsWith("```");
-	}
-
-	getInsertPositionAfterBullet(line: string): number {
-		const bulletMatch = line.match(LIST_BULLET_REGEX);
-		if (bulletMatch) {
-			return bulletMatch.index! + bulletMatch[0].length;
-		}
-		return -1;
 	}
 
 	getInsertPositionInLine(editor: Editor): number {
@@ -101,17 +81,17 @@ export default class TiditPlugin extends Plugin {
 		const lineText = editor.getLine(cursor.line - 1);
 		let insertPosition = 0;
 
-		if(this.isListLineTask(lineText)) {
-			return -1;
-		}
+	       if(isListLineTask(lineText)) {
+		       return -1;
+	       }
 
-		if (this.isCursorInListLine(lineText)) {
-			if(this.settings.addTimestampToListLines) {
-				insertPosition = this.getInsertPositionAfterBullet(lineText);
-			} else {
-				return -1;
-			}
-		}
+	       if (isCursorInListLine(lineText)) {
+		       if(this.settings.addTimestampToListLines) {
+			       insertPosition = getInsertPositionAfterBullet(lineText);
+		       } else {
+			       return -1;
+		       }
+	       }
 
 		if (this.isCodeBlockStartEnd(lineText)) {
 			return -1;
