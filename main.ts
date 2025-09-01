@@ -130,7 +130,7 @@ export default class TiditPlugin extends Plugin {
 
 		this.addSettingTab(new TiditSettingTab(this.app, this));
 
-		this.registerDomEvent(document, "keydown", (e: KeyboardEvent) => {
+		this.registerDomEvent(document, "keyup", (e: KeyboardEvent) => {
 			if (!this.settings.tiditOn) return;
 
 			if (e.key !== "Enter") return;
