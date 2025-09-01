@@ -79,6 +79,7 @@ export default class TiditPlugin extends Plugin {
 
 	getInsertPositionInLine(editor: Editor): number {
 		const cursor = editor.getCursor();
+		console.log(`Cursor at line ${cursor.line}, ch ${cursor.ch}`);
 		// line already moved with the ENTER key. look back one line
 		const lineText = editor.getLine(cursor.line - 1);
 		
@@ -155,7 +156,7 @@ export default class TiditPlugin extends Plugin {
 
 		this.addSettingTab(new TiditSettingTab(this.app, this));
 
-		this.registerDomEvent(document, "keydown", (e: KeyboardEvent) => {
+		this.registerDomEvent(document, "keyup", (e: KeyboardEvent) => {
 			if (!this.settings.tiditOn) return;
 
 			if (e.key !== "Enter") return;
@@ -177,6 +178,7 @@ export default class TiditPlugin extends Plugin {
 			}
 
 			const cursor = editor.getCursor();
+			console.log(`Cursor at line ${cursor.line}, ch ${cursor.ch}`);
 
 			const now = moment();
 			if (
