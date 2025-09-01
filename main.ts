@@ -10,7 +10,7 @@ import {
 	moment,
 } from "obsidian";
 import * as momentTimezone from "moment-timezone";
-import { LIST_BULLET_REGEX, LIST_TASK_REGEX, isCursorInListLine, isListLineTask, getInsertPositionAfterBullet } from "./utils";
+import { LIST_BULLET_REGEX, LIST_TASK_REGEX, isCursorInListLine, isListLineTask, getInsertPositionAfterBullet, getInsertPositionInLineFromText } from "./utils";
 
 interface TiditPluginSettings {
 	tiditOn: boolean;
@@ -76,47 +76,15 @@ export default class TiditPlugin extends Plugin {
 	}
 
 	getInsertPositionInLine(editor: Editor): number {
-		const cursor = editor.getCursor();
-		// line already moved with the ENTER key. look back one line
-		const lineText = editor.getLine(cursor.line - 1);
-		let insertPosition = 0;
-
-	       if(isListLineTask(lineText)) {
-		       return -1;
-	       }
-
-	       if (isCursorInListLine(lineText)) {
-		       if(this.settings.addTimestampToListLines) {
-			       insertPosition = getInsertPositionAfterBullet(lineText);
-		       } else {
-			       return -1;
-		       }
-	       }
-
-		if (this.isCodeBlockStartEnd(lineText)) {
-			return -1;
-		}
-
-		// Check if the beginning of the line matches a datetime string with the format
-		const timestampFormat = this.settings.timestampFormat;
-		const formattedTimestampLength = moment().format(timestampFormat).length;
-
-		try {
-			// strict mode to ensure exact match
-			const matchTimeStamp = moment(
-				lineText.trim().substring(insertPosition, formattedTimestampLength),
-				timestampFormat,
-				true
-			);
-			if (matchTimeStamp.isValid()) {
-				return -1; 	// Don't insert if it matches the timestamp format
-			}
-		} catch {
-			// If parsing fails, it's not a matching timestamp format
-			return -1;
-		}
-
-		return insertPosition;
+	       const cursor = editor.getCursor();
+	       // line already moved with the ENTER key. look back one line
+	       const lineText = editor.getLine(cursor.line - 1);
+	       return getInsertPositionInLineFromText(
+		       lineText,
+		       this.settings.addTimestampToListLines,
+		       this.settings.timestampFormat,
+		       this.isCodeBlockStartEnd.bind(this)
+	       );
 	}
 
 	async onload() {
